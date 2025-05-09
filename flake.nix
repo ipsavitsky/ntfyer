@@ -16,6 +16,7 @@
             libnotify
             glib
             gdk-pixbuf
+            pkg-config
             valgrind
           ];
         };
