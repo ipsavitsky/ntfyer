@@ -20,13 +20,7 @@ pub fn sendNotification(
 ) !void {
     var err: ?*notify.GError = null;
     const raw_ntfy = notify.g_object_new(notify.notify_notification_get_type(), "summary", topic.ptr, "body", text.ptr, @as(?*anyopaque, null));
-    const ntfy = @as(
-        ?*notify.NotifyNotification,
-        @ptrCast(
-            @alignCast(raw_ntfy),
-        ),
-    );
-    const res: c_int = notify.notify_notification_show(ntfy, &err);
+    const res: c_int = notify.notify_notification_show(@ptrCast(@alignCast(raw_ntfy)), &err);
     if (res == 0) {
         return error.FailedToPostNotification;
     }
