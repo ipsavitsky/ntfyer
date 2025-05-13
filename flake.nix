@@ -18,6 +18,7 @@
             gdk-pixbuf
             pkg-config
             valgrind
+            zls
           ];
         };
       };
