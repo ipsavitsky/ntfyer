@@ -8,11 +8,12 @@ const data = struct {
     message: ?[]const u8 = null,
 };
 
-fn subscribe_to_topic(allocator: std.mem.Allocator, token: []const u8) !void {
+fn subscribe_to_topic(allocator: std.mem.Allocator, ntfy_conf: conf.NtfyConfig, topic: []const u8) !void {
     var client = std.http.Client{ .allocator = allocator };
     var shb: [16 * 1024]u8 = undefined;
-    const uri = std.Uri.parse("http://ntfy.savitsky.dev/test/sse") catch unreachable;
-    const auth_header = try std.fmt.allocPrint(allocator, "Bearer {s}", .{token});
+    const link = std.fmt.allocPrint(allocator, "http://{s}/{s}/sse", .{ ntfy_conf.hostname, topic }) catch unreachable;
+    const uri = std.Uri.parse(link) catch unreachable;
+    const auth_header = try std.fmt.allocPrint(allocator, "Bearer {s}", .{ntfy_conf.token});
     defer allocator.free(auth_header);
     var req = try client.open(std.http.Method.GET, uri, .{
         .server_header_buffer = &shb,
@@ -42,7 +43,7 @@ fn subscribe_to_topic(allocator: std.mem.Allocator, token: []const u8) !void {
             });
             const message_data = val.value;
             defer val.deinit();
-            std.log.debug("we be parsin' {s}: {s}", .{ message_data.event, message_data.message orelse "nothing" });
+            std.log.debug("parsing message {s}: {s}", .{ message_data.event, message_data.message orelse "" });
             if (std.mem.eql(u8, message_data.event, "message")) {
                 try notif.sendNotification(message_data.topic.?, message_data.message.?);
             }
@@ -54,12 +55,28 @@ fn subscribe_to_topic(allocator: std.mem.Allocator, token: []const u8) !void {
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
-    // defer std.debug.assert(gpa.deinit() == .ok);
+    defer std.debug.assert(gpa.deinit() == .ok);
 
-    const config = try conf.load_config(allocator);
+    var args = try std.process.argsWithAllocator(allocator);
+    defer args.deinit();
+
+    _ = args.next();
+
+    var config_filename: []const u8 = "config.zon";
+
+    while (args.next()) |arg| {
+        if (std.mem.eql(u8, arg, "-c")) {
+            config_filename = args.next() orelse unreachable;
+        } else {
+            std.log.warn("Unknown argument: {s}", .{arg});
+        }
+    }
+    std.log.debug("config filename: {s}", .{config_filename});
+
+    const config = try conf.load_config(allocator, config_filename);
 
     try notif.initNotifier();
     defer notif.deinitNotifier();
 
-    try subscribe_to_topic(allocator, config.ntfy_token);
+    try subscribe_to_topic(allocator, config.ntfy, config.topics[0]);
 }
