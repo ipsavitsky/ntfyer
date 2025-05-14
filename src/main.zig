@@ -45,7 +45,7 @@ fn subscribe_to_topic(allocator: std.mem.Allocator, ntfy_conf: conf.NtfyConfig, 
             defer val.deinit();
             std.log.debug("parsing message {s}: {s}", .{ message_data.event, message_data.message orelse "" });
             if (std.mem.eql(u8, message_data.event, "message")) {
-                try notif.sendNotification(message_data.topic.?, message_data.message.?);
+                try notif.sendNotification(allocator, message_data.topic.?, message_data.message.?);
             }
         }
         allocator.free(res);
