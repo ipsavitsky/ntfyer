@@ -19,6 +19,9 @@ pub fn build(b: *std.Build) void {
     exe.linkSystemLibrary("gdk-pixbuf-2.0");
     exe.linkSystemLibrary("notify");
 
+    const aio = b.dependency("aio", .{});
+    exe.root_module.addImport("coro", aio.module("coro"));
+
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);

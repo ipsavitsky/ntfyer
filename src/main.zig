@@ -1,4 +1,5 @@
 const std = @import("std");
+const coro = @import("coro");
 const notif = @import("./notification.zig");
 const conf = @import("./config.zig");
 
@@ -78,5 +79,9 @@ pub fn main() !void {
     try notif.initNotifier();
     defer notif.deinitNotifier();
 
-    try subscribe_to_topic(allocator, config.ntfy, config.topics[0]);
+    var scheduler = try coro.Scheduler.init(allocator, .{});
+    defer scheduler.deinit();
+
+    var task = try scheduler.spawn(subscribe_to_topic, .{ allocator, config.ntfy, config.topics[0] }, .{});
+    try task.complete(.wait);
 }
