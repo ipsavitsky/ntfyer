@@ -34,10 +34,13 @@
 
           nativeBuildInputs = with pkgs; [
             zig_0_14.hook
+            pkg-config
+          ];
+
+          buildInputs = with pkgs; [
             libnotify
             glib
             gdk-pixbuf
-            pkg-config
           ];
         };
       };
