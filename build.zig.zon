@@ -1,12 +1,7 @@
 .{
     .name = .ntfyer,
     .version = "0.0.0",
-    .dependencies = .{
-        .aio = .{
-            .url = "git+https://github.com/Cloudef/zig-aio.git?ref=zig-0.14#787f3cbbcfea8779e83828171b0e931527710c7a",
-            .hash = "aio-0.0.0-776t3mxXBQABlN16AcKJ2Y034d0WhbvLAcKKpgOdf7cd",
-        },
-    },
+    .dependencies = .{},
     .fingerprint = 0x6c82fd74ec664401, // Changing this has security and trust implications.
     .minimum_zig_version = "0.14.0",
     .paths = .{

@@ -1,5 +1,4 @@
 const std = @import("std");
-const coro = @import("coro");
 const notif = @import("./notification.zig");
 const conf = @import("./config.zig");
 
@@ -53,6 +52,12 @@ fn subscribe_to_topic(allocator: std.mem.Allocator, ntfy_conf: conf.NtfyConfig, 
     }
 }
 
+fn subscription_handler(allocator: std.mem.Allocator, ntfy_conf: conf.NtfyConfig, topic: []const u8) void {
+    subscribe_to_topic(allocator, ntfy_conf, topic) catch |err| {
+        std.log.err("Error in handling {s}, stopping thread: {s}", .{ topic, @errorName(err) });
+    };
+}
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
@@ -79,9 +84,10 @@ pub fn main() !void {
     try notif.initNotifier();
     defer notif.deinitNotifier();
 
-    var scheduler = try coro.Scheduler.init(allocator, .{});
-    defer scheduler.deinit();
-
-    var task = try scheduler.spawn(subscribe_to_topic, .{ allocator, config.ntfy, config.topics[0] }, .{});
-    try task.complete(.wait);
+    var tp: std.Thread.Pool = undefined;
+    try tp.init(.{ .allocator = allocator });
+    defer tp.deinit();
+    for (config.topics) |topic| {
+        try tp.spawn(subscription_handler, .{ allocator, config.ntfy, topic });
+    }
 }
