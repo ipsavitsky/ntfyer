@@ -45,7 +45,7 @@
 
         packages = rec {
           default = ntfyer;
-          ntfyer = pkgs.stdenv.mkDerivation rec {
+          ntfyer = pkgs.stdenvNoCC.mkDerivation rec {
             name = "ntfyer";
             version = "0.1.0";
             src = ./.;
