@@ -20,22 +20,26 @@
       let
         pkgs = import nixpkgs { inherit system; };
         treefmtModule = treefmt-nix.lib.evalModule pkgs ./nix/treefmt.nix;
+        runtimeDependencies = with pkgs; [
+          libnotify
+          glib
+          gdk-pixbuf
+        ];
       in
       {
         formatter = treefmtModule.config.build.wrapper;
 
         devShells = {
           default = pkgs.mkShell {
-            packages = with pkgs; [
-              zig_0_14
-              libnotify
-              glib
-              gdk-pixbuf
-              pkg-config
-
-              valgrind
-              zls
-            ];
+            packages =
+              with pkgs;
+              [
+                zig_0_14
+                pkg-config
+                valgrind
+                zls
+              ]
+              ++ runtimeDependencies;
           };
         };
 
@@ -51,11 +55,7 @@
               pkg-config
             ];
 
-            buildInputs = with pkgs; [
-              libnotify
-              glib
-              gdk-pixbuf
-            ];
+            buildInputs = runtimeDependencies;
           };
         };
       }
