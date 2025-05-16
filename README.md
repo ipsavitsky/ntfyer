@@ -16,6 +16,7 @@ To build, just run `zig build`. A nix package is also available.
 By default, ntfyer looks for `config.zon` in the directory it was started in. Path to it can also be supplied via `-c <path>` flag.
 
 Structure of `config.zon`:
+
 ```zig
 .{
     .ntfy = .{
