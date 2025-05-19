@@ -61,7 +61,7 @@
       }
     )
     // {
-      nixosModules = {
+      homeManagerModules = {
         ntfyer = import ./nix/module.nix { ntfyer = self.packages; };
       };
     };
