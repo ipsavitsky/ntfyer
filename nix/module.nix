@@ -24,7 +24,7 @@ in
 
   config = lib.mkIf cfg.enable {
     systemd.user.services.ntfyer = {
-      serviceConfig = {
+      Service = {
         ExecStart = ''
           ${cfg.package}/bin/ntfyer \
             -c ${cfg.configurationFile}
@@ -32,7 +32,9 @@ in
         Restart = "on-failure";
       };
 
-      wantedBy = [ "default.target" ];
+      Install = {
+        WantedBy = [ "default.target" ];
+      };
     };
   };
 }
