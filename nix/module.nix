@@ -14,7 +14,7 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      inherit (ntfyer.${config.nixpkgs.system}) default;
+      inherit (ntfyer.${pkgs.system}) default;
     };
 
     configurationFile = lib.mkOption {
