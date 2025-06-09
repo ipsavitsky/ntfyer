@@ -53,9 +53,11 @@ fn subscribe_to_topic(allocator: std.mem.Allocator, ntfy_conf: conf.NtfyConfig, 
 }
 
 fn subscription_handler(allocator: std.mem.Allocator, ntfy_conf: conf.NtfyConfig, topic: []const u8) void {
-    subscribe_to_topic(allocator, ntfy_conf, topic) catch |err| {
-        std.log.err("Error in handling {s}, stopping thread: {s}", .{ topic, @errorName(err) });
-    };
+    while (true) {
+        subscribe_to_topic(allocator, ntfy_conf, topic) catch |err| {
+            std.log.err("Error in handling {s}, restarting thread: {s}", .{ topic, @errorName(err) });
+        };
+    }
 }
 
 pub fn main() !void {
