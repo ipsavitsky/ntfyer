@@ -10,13 +10,13 @@ const data = struct {
 
 fn subscribe_to_topic(allocator: std.mem.Allocator, ntfy_conf: conf.NtfyConfig, topic: []const u8) !void {
     var client = std.http.Client{ .allocator = allocator };
-    var shb: [16 * 1024]u8 = undefined;
+    defer client.deinit();
     const link = std.fmt.allocPrint(allocator, "http://{s}/{s}/sse", .{ ntfy_conf.hostname, topic }) catch unreachable;
+    defer allocator.free(link);
     const uri = std.Uri.parse(link) catch unreachable;
     const auth_header = try std.fmt.allocPrint(allocator, "Bearer {s}", .{ntfy_conf.token});
     defer allocator.free(auth_header);
-    var req = try client.open(std.http.Method.GET, uri, .{
-        .server_header_buffer = &shb,
+    var req = try client.request(std.http.Method.GET, uri, .{
         .redirect_behavior = .unhandled,
         .headers = .{ .authorization = .{ .override = auth_header } },
         .extra_headers = &.{},
@@ -25,14 +25,18 @@ fn subscribe_to_topic(allocator: std.mem.Allocator, ntfy_conf: conf.NtfyConfig, 
     });
     defer req.deinit();
 
-    try req.send();
-    try req.finish();
-    try req.wait();
+    try req.sendBodiless();
+    var response = try req.receiveHead(&.{});
+
+    var reader_buffer: [16 * 1024]u8 = undefined;
+    var body_reader = response.reader(&reader_buffer);
 
     while (true) {
-        const res = try req.reader().readUntilDelimiterAlloc(allocator, '\n', 1024);
-        if (res.len == 0) continue;
-        var it = std.mem.splitSequence(u8, res, ":");
+        const line = try body_reader.takeDelimiter('\n');
+        const actual_line = line.?;
+        std.log.info("Received message: {s}", .{actual_line});
+        if (actual_line.len == 0) continue;
+        var it = std.mem.splitSequence(u8, actual_line, ":");
         const prefix = it.next() orelse continue;
         const rest = it.rest();
         std.log.info("{s}{s}", .{ prefix, rest });
@@ -48,7 +52,6 @@ fn subscribe_to_topic(allocator: std.mem.Allocator, ntfy_conf: conf.NtfyConfig, 
                 try notif.sendNotification(allocator, message_data.topic.?, message_data.message.?);
             }
         }
-        allocator.free(res);
     }
 }
 

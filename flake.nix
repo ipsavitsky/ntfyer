@@ -34,7 +34,7 @@
             packages =
               with pkgs;
               [
-                zig_0_14
+                zig_0_15
                 pkg-config
                 valgrind
                 zls
@@ -51,7 +51,7 @@
             src = ./.;
 
             nativeBuildInputs = with pkgs; [
-              zig_0_14.hook
+              zig_0_15.hook
               pkg-config
             ];
 
