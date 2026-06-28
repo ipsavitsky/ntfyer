@@ -8,8 +8,8 @@ const data = struct {
     message: ?[]const u8 = null,
 };
 
-fn subscribe_to_topic(allocator: std.mem.Allocator, ntfy_conf: conf.NtfyConfig, topic: []const u8) !void {
-    var client = std.http.Client{ .allocator = allocator };
+fn subscribe_to_topic(allocator: std.mem.Allocator, io: std.Io, ntfy_conf: conf.NtfyConfig, topic: []const u8) !void {
+    var client = std.http.Client{ .allocator = allocator, .io = io };
     defer client.deinit();
     const link = std.fmt.allocPrint(allocator, "http://{s}/{s}/sse", .{ ntfy_conf.hostname, topic }) catch unreachable;
     defer allocator.free(link);
@@ -27,6 +27,11 @@ fn subscribe_to_topic(allocator: std.mem.Allocator, ntfy_conf: conf.NtfyConfig, 
 
     try req.sendBodiless();
     var response = try req.receiveHead(&.{});
+    if (response.head.status != .ok) {
+        return error.UnexpectedStatus;
+    }
+
+    std.log.debug("response: {s}", .{response.head.bytes});
 
     var reader_buffer: [16 * 1024]u8 = undefined;
     var body_reader = response.reader(&reader_buffer);
@@ -55,21 +60,20 @@ fn subscribe_to_topic(allocator: std.mem.Allocator, ntfy_conf: conf.NtfyConfig, 
     }
 }
 
-fn subscription_handler(allocator: std.mem.Allocator, ntfy_conf: conf.NtfyConfig, topic: []const u8) void {
+fn subscription_handler(allocator: std.mem.Allocator, io: std.Io, ntfy_conf: conf.NtfyConfig, topic: []const u8) void {
     while (true) {
-        subscribe_to_topic(allocator, ntfy_conf, topic) catch |err| {
-            std.log.err("Error in handling {s}, restarting thread: {s}", .{ topic, @errorName(err) });
+        subscribe_to_topic(allocator, io, ntfy_conf, topic) catch |err| {
+            std.log.err("Error in handling {s} thread: {s}", .{ topic, @errorName(err) });
         };
+        io.sleep(std.Io.Duration.fromSeconds(10), std.Io.Clock.real) catch unreachable;
     }
 }
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
-    defer std.debug.assert(gpa.deinit() == .ok);
+pub fn main(init: std.process.Init) !void {
+    const gpa = init.gpa;
+    const io = init.io;
 
-    var args = try std.process.argsWithAllocator(allocator);
-    defer args.deinit();
+    var args = init.minimal.args.iterate();
 
     _ = args.next();
 
@@ -84,15 +88,23 @@ pub fn main() !void {
     }
     std.log.debug("config filename: {s}", .{config_filename});
 
-    const config = try conf.load_config(allocator, config_filename);
+    const config = try conf.load_config(io, gpa, config_filename);
 
     try notif.initNotifier();
     defer notif.deinitNotifier();
 
-    var tp: std.Thread.Pool = undefined;
-    try tp.init(.{ .allocator = allocator });
+    var tp: std.Io.Threaded = .init(gpa, .{});
     defer tp.deinit();
-    for (config.topics) |topic| {
-        try tp.spawn(subscription_handler, .{ allocator, config.ntfy, topic });
+    const tp_io = tp.io();
+
+    const futures = try gpa.alloc(std.Io.Future(void), config.topics.len);
+    defer gpa.free(futures);
+
+    for (config.topics, futures) |topic, *future| {
+        future.* = try tp_io.concurrent(subscription_handler, .{ gpa, io, config.ntfy, topic });
+    }
+
+    for (futures) |*future| {
+        _ = future.await(tp_io);
     }
 }

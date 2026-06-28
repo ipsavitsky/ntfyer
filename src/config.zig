@@ -10,7 +10,7 @@ pub const Config = struct {
     topics: []const []const u8,
 };
 
-pub fn load_config(allocator: std.mem.Allocator, path_to_config: []const u8) !Config {
-    const data = try std.fs.cwd().readFileAlloc(allocator, path_to_config, 4096);
-    return std.zon.parse.fromSlice(Config, allocator, @ptrCast(data), null, .{});
+pub fn load_config(io: std.Io, allocator: std.mem.Allocator, path_to_config: []const u8) !Config {
+    const data = try std.Io.Dir.cwd().readFileAlloc(io, path_to_config, allocator, std.Io.Limit.unlimited);
+    return std.zon.parse.fromSliceAlloc(Config, allocator, @ptrCast(data), null, .{});
 }

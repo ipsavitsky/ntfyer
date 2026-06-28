@@ -1,0 +1,9 @@
+.{
+    .ntfy = .{
+        .token = "",
+        .hostname = "localhost:1234",
+    },
+    .topics = .{
+        "test",
+    },
+}
