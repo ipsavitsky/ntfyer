@@ -3,21 +3,31 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    const exe_mod = b.createModule(.{
-        .root_source_file = b.path("src/main.zig"),
+
+    const translate_c = b.addTranslateC(.{
+        .root_source_file = b.path("src/c.h"),
         .target = target,
         .optimize = optimize,
     });
+    translate_c.linkSystemLibrary("glib-2.0", .{});
+    translate_c.linkSystemLibrary("gdk-pixbuf-2.0", .{});
+    translate_c.linkSystemLibrary("notify", .{});
 
     const exe = b.addExecutable(.{
         .name = "ntfyer",
-        .root_module = exe_mod,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .optimize = optimize,
+            .target = target,
+            .imports = &.{
+                .{ .name = "c", .module = translate_c.createModule() },
+            },
+        }),
     });
-
-    exe.linkLibC();
-    exe.linkSystemLibrary("glib-2.0");
-    exe.linkSystemLibrary("gdk-pixbuf-2.0");
-    exe.linkSystemLibrary("notify");
+    // exe.root_module.link_libc = true;
+    // exe.root_module.linkSystemLibrary("glib-2.0", .{});
+    // exe.root_module.linkSystemLibrary("gdk-pixbuf-2.0", .{});
+    // exe.root_module.linkSystemLibrary("notify", .{});
 
     b.installArtifact(exe);
 

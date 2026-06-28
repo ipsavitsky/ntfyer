@@ -63,13 +63,11 @@ fn subscription_handler(allocator: std.mem.Allocator, ntfy_conf: conf.NtfyConfig
     }
 }
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
-    defer std.debug.assert(gpa.deinit() == .ok);
+pub fn main(init: std.process.Init) !void {
+    const gpa = init.gpa;
+    const io = init.io;
 
-    var args = try std.process.argsWithAllocator(allocator);
-    defer args.deinit();
+    var args = init.minimal.args.iterate();
 
     _ = args.next();
 
@@ -84,15 +82,15 @@ pub fn main() !void {
     }
     std.log.debug("config filename: {s}", .{config_filename});
 
-    const config = try conf.load_config(allocator, config_filename);
+    const config = try conf.load_config(io, gpa, config_filename);
 
     try notif.initNotifier();
     defer notif.deinitNotifier();
 
     var tp: std.Thread.Pool = undefined;
-    try tp.init(.{ .allocator = allocator });
+    try tp.init(.{ .allocator = gpa });
     defer tp.deinit();
     for (config.topics) |topic| {
-        try tp.spawn(subscription_handler, .{ allocator, config.ntfy, topic });
+        try tp.spawn(subscription_handler, .{ gpa, config.ntfy, topic });
     }
 }

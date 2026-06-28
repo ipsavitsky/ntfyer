@@ -34,10 +34,11 @@
             packages =
               with pkgs;
               [
-                zig_0_15
+                zig_0_16
                 pkg-config
                 valgrind
                 zls
+                nil
               ]
               ++ runtimeDependencies;
           };
@@ -45,13 +46,13 @@
 
         packages = rec {
           default = ntfyer;
-          ntfyer = pkgs.stdenvNoCC.mkDerivation rec {
+          ntfyer = pkgs.stdenvNoCC.mkDerivation {
             name = "ntfyer";
             version = "0.1.0";
             src = ./.;
 
             nativeBuildInputs = with pkgs; [
-              zig_0_15.hook
+              zig_0_16.hook
               pkg-config
             ];
 

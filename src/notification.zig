@@ -1,18 +1,15 @@
 const std = @import("std");
-const notify = @cImport({
-    @cDefine("__LIBC", "");
-    @cInclude("libnotify/notify.h");
-});
+const c = @import("c");
 
 pub fn initNotifier() !void {
-    const res: c_int = notify.notify_init("ntfyer");
+    const res: c_int = c.notify_init("ntfyer");
     if (res == 0) {
         return error.FailedToInitNotify;
     }
 }
 
 pub fn deinitNotifier() void {
-    notify.notify_uninit();
+    c.notify_uninit();
 }
 
 pub fn sendNotification(
@@ -20,13 +17,13 @@ pub fn sendNotification(
     topic: []const u8,
     text: []const u8,
 ) !void {
-    var err: ?*notify.GError = null;
+    var err: ?*c.GError = null;
     const topicZ = allocator.dupeZ(u8, topic) catch unreachable;
     defer allocator.free(topicZ);
     const textZ = allocator.dupeZ(u8, text) catch unreachable;
     defer allocator.free(textZ);
-    const raw_ntfy = notify.g_object_new(notify.notify_notification_get_type(), "summary", topicZ.ptr, "body", textZ.ptr, @as(?*anyopaque, null));
-    const res: c_int = notify.notify_notification_show(@ptrCast(@alignCast(raw_ntfy)), &err);
+    const raw_ntfy = c.g_object_new(c.notify_notification_get_type(), "summary", topicZ.ptr, "body", textZ.ptr, @as(?*anyopaque, null));
+    const res: c_int = c.notify_notification_show(@ptrCast(@alignCast(raw_ntfy)), &err);
     if (res == 0) {
         return error.FailedToPostNotification;
     }
