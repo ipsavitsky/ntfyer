@@ -39,12 +39,12 @@ fn subscribe_to_topic(allocator: std.mem.Allocator, io: std.Io, ntfy_conf: conf.
     while (true) {
         const line = try body_reader.takeDelimiter('\n');
         const actual_line = line.?;
-        std.log.info("Received message: {s}", .{actual_line});
+        std.log.debug("Received message: {s}", .{actual_line});
         if (actual_line.len == 0) continue;
         var it = std.mem.splitSequence(u8, actual_line, ":");
         const prefix = it.next() orelse continue;
         const rest = it.rest();
-        std.log.info("{s}{s}", .{ prefix, rest });
+        std.log.debug("{s}{s}", .{ prefix, rest });
         if (std.mem.eql(u8, prefix, "data")) {
             std.log.debug("parsing data", .{});
             const val = try std.json.parseFromSlice(data, allocator, rest, .{
